@@ -1,0 +1,18 @@
+{
+  "__type__": "cc.Material",
+  "_name": "sbblMaterial",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "728cd192-7fe5-4052-9532-e1003e26587f"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {},
+      "props": {
+        "toLeft": true
+      }
+    }
+  }
+}
