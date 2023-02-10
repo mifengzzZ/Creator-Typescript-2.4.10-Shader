@@ -1,0 +1,51 @@
+{
+  "__type__": "cc.Material",
+  "_name": "waterMat",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "99a1d0dd-86d5-4690-a5c8-9c296be6614a"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "props": {
+        "waveTexture": {
+          "__uuid__": "b38d9d20-7f05-46f0-ba3b-9bef9142e6df"
+        },
+        "waveDirection": {
+          "__type__": "cc.Vec2",
+          "x": 0.6,
+          "y": 0.3
+        },
+        "waveSpeed": 0.13,
+        "waveStrength": 0.015,
+        "causticStrength": 0.3,
+        "causticScale": 0.65,
+        "causticSpeed": 0.08,
+        "causticColor": {
+          "__type__": "cc.Color",
+          "r": 12,
+          "g": 16,
+          "b": 66,
+          "a": 255
+        },
+        "causticTexture": {
+          "__uuid__": "06b5271e-48ae-467a-ae65-56fbafe9b108"
+        },
+        "colorStepUv": 2.2,
+        "alphaStepUv": 5,
+        "alphaThreshold": 1
+      },
+      "defines": {
+        "USE_TEXTURE": true,
+        "USE_TILING": true,
+        "USE_WAVE": true,
+        "USE_CAUSTIC": true,
+        "USE_COLOR_STEP": true,
+        "USE_ALPHA_STEP": true,
+        "USE_ALPHA_TEST": false
+      }
+    }
+  }
+}

@@ -1,0 +1,185 @@
+// Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        texture: { value: white }
+        alphaThreshold: { value: 0.5 }
+
+        tiling: { value: [1.0, 0.5] }
+        waveTexture: { value: white }
+        waveDirection: { value: [0.5, 0.5] }
+        waveSpeed: { value: 0.5, editor: { slide: true, min: 0, max: 1.0, step: 0.01 } }
+        waveStrength: { value: 0.01, editor: { slide: true, min: 0, max: 0.2, step: 0.001 } }
+
+        causticStrength: { value: 0.5, editor: { parent: USE_CAUSTIC, slide: true, min: 0.0, max: 1.0, step: 0.01 } }
+        causticScale: { value: 0.5, editor: { parent: USE_CAUSTIC, slide: true, min: 0.0, max: 10.0, step: 0.01 } }
+        causticSpeed: { value: 0.1, editor: { parent: USE_CAUSTIC, slide: true, min: 0.0, max: 1.0, step: 0.01 } }
+        causticRGBSplit: { value: 0.5, editor: { parent: USE_CAUSTIC, slide: true, min: 0.0, max: 1.0, step: 0.001 } }
+        causticDepth: { value: 1, editor: { parent: USE_CAUSTIC, slide: true, min: 0.0, max: 1.0, step: 0.01 } }
+        causticColor: { value: [1, 1, 1, 1], editor: { parent: USE_CAUSTIC, type: color } }
+        causticTexture: { value: white, editor: { parent: USE_CAUSTIC } }
+
+        colorStepUv: { value: 0.5, editor: { parent: USE_COLOR_STEP }  }
+        alphaStepUv: { value: 0.5, editor: { parent: USE_ALPHA_STEP }  }
+}%
+
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <cc-local>
+
+  #if USE_TILING
+    uniform VSConstant {
+      vec2 tiling;
+    };
+  #endif
+
+  in vec3 a_position;
+  in vec4 a_color;
+  out vec4 v_color;
+
+  in vec2 a_uv0;
+  out vec2 v_uv0;
+
+  void main () {
+    vec4 pos = vec4(a_position, 1);
+
+    #if CC_USE_MODEL
+    pos = cc_matViewProj * cc_matWorld * pos;
+    #else
+    pos = cc_matViewProj * pos;
+    #endif
+
+    #if USE_TILING
+      v_uv0 = a_uv0 * tiling;
+    #endif
+
+    v_color = a_color;
+
+    gl_Position = pos;
+  }
+}%
+
+
+CCProgram fs %{
+  precision highp float;
+
+  #include <alpha-test>
+  #include <texture>
+  #include <cc-global>
+
+  #define PI 3.1415926
+
+  in vec4 v_color;
+  in vec2 v_uv0;
+
+  uniform Constant {
+    float colorStepUv;
+    float alphaStepUv;
+  };
+
+  #if USE_TEXTURE
+    uniform sampler2D texture;
+  #endif
+
+  #if USE_WAVE
+    uniform sampler2D waveTexture;
+    uniform waveConstant {
+      vec2 waveDirection;
+      float waveSpeed;
+      float waveStrength;
+    };
+  #endif
+
+  #if USE_CAUSTIC
+    uniform Caustic {
+      vec4 causticColor;
+      float causticStrength;
+      float causticScale;
+      float causticSpeed;
+      float causticRGBSplit;
+      float causticDepth;
+    };
+    uniform sampler2D causticTexture;
+    vec2 panner(vec2 uv, float direction, float speed, vec2 offset, float tiling)
+    {
+        direction = direction * 2. - 1.;
+        vec2 dir = normalize(vec2(cos(PI * direction), sin(PI * direction)));
+        return  (dir * cc_time.x * speed) + offset + (uv * tiling);
+    }
+    vec3 rgbSplit(float split, sampler2D tex, vec2 uv)
+    {
+        vec2 UVR = uv + vec2(split, split);
+        vec2 UVG = uv + vec2(split, -split);
+        vec2 UVB = uv + vec2(-split, -split);
+
+        float r = texture(tex, UVR).r;
+        float g = texture(tex, UVG).g;
+        float b = texture(tex, UVB).b;
+
+        return vec3(r,g,b);
+    }
+    vec3 caustic()
+    {
+      vec2 uv = v_uv0;
+
+      float strength = causticStrength;
+      float split = causticRGBSplit * 0.01;
+      float speed = causticSpeed;
+      float scale = causticScale;
+
+      vec3 texture1 = rgbSplit(split, causticTexture, panner(uv, 1., speed, vec2(0., 0.), 1./scale));
+      vec3 texture2 = rgbSplit(split, causticTexture, panner(uv, 1., speed, vec2(0., 0.), -1./scale));
+      vec3 textureCombined = min(texture1, texture2);
+
+      return strength * 10. * textureCombined;
+    }
+  #endif
+
+  void main () {
+    vec2 uv = v_uv0;
+
+    // 水面流动
+    #if USE_WAVE
+      float time = cc_time.x * waveSpeed;
+      vec2 offset = texture(waveTexture, uv + time * waveDirection).xy*waveStrength;
+      uv += offset;
+    #endif
+
+    vec4 o;
+    #if USE_TEXTURE
+      o = texture(texture, uv);
+      o *= v_color;
+    #endif
+
+    // 水体焦散
+    #if USE_CAUSTIC
+      float causticDepth = causticColor.x;
+      vec3 ctColor = causticColor.yzw;
+      o.rgb += caustic() * ctColor;
+    #endif
+
+    // 颜色平滑处理
+    #if USE_COLOR_STEP
+      o.rgb *=smoothstep(1.5,-0.1,uv.y*colorStepUv) ;
+    #endif
+
+    // 透明度处理
+    #if USE_ALPHA_STEP
+      o.a *=smoothstep(-0.2,0.75,uv.y*alphaStepUv) ;
+    #endif
+
+    gl_FragColor = o.rgba;
+  }
+}%
