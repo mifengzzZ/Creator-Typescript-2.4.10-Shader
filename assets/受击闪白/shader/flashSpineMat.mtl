@@ -1,0 +1,19 @@
+{
+  "__type__": "cc.Material",
+  "_name": "flashSpineMat",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "57fef60c-9e4c-4b02-8c05-960f0ed0df14"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {
+        "USE_TINT": true,
+        "USE_ALPHA_TEST": true,
+        "INPUT_IS_GAMMA": false
+      }
+    }
+  }
+}
